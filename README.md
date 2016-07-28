@@ -27,11 +27,10 @@
 
 
 项目截图:
-*注:由于是课件，所以未完全实现
+*注:由于是课件，所以功能未完全实现
  ![image](https://github.com/triaquae/TengLan/blob/master/share/screenshots/p1.jpg)
  ![image](https://github.com/triaquae/TengLan/blob/master/share/screenshots/p2.jpg)
  ![image](https://github.com/triaquae/TengLan/blob/master/share/screenshots/p3.jpg)
  ![image](https://github.com/triaquae/TengLan/blob/master/share/screenshots/p3.png)
  ![image](https://github.com/triaquae/TengLan/blob/master/share/screenshots/p3.png)
-
 
