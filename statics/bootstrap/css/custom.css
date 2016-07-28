@@ -1,0 +1,27 @@
+
+.signed{
+    background-color: greenyellow;
+}
+.unregistered{
+    background-color: darkgrey;
+}
+.graduated{
+    background-color: aqua;
+}
+
+
+.form-signin{
+    max-width: 330px;
+    padding: 15px;
+    margin: 0 auto
+}
+
+
+.real_time_report_watching{
+    width: 100%;
+    height: 500px;
+    background-color: black;
+}
+.real_time_report_watching p{
+    color: white;
+}

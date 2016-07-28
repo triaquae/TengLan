@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+
+{% block right-panel-content %}
+
+    {{ current_site }}
+    <div class="row region_selector">
+        <div region_type="province" name="province" onchange="SwitchRegion(this)" class="col-lg-2 ">
+            <select class="form-control">
+                <option value>选择省</option>
+            </select>
+        </div>
+        <div region_type="city" class="col-lg-3 ">
+            <select class="form-control">
+                <option value>选择地区</option>
+            </select>
+        </div>
+        <div  class="col-lg-3 ">
+           <button class="btn btn-success" onclick="StartMonitor()">开始监测</button>
+        </div>
+    </div>
+    <div class="row" id="region_trends_graph_container" ></div>
+
+    <h3>实时汇报数据</h3>
+    <div class="row  " >
+        <div class="col-md-7">
+            <div class="real_time_report_watching">
+                ddd
+            </div>
+        </div>
+        <div class=" col-md-4" id="access_time_range"></div>
+            <div id=""></div>
+    </div>
+
+{% endblock %}
+
+
+{% block bottom-js %}
+<script>
+    function GetRegionList(){
+        $.getJSON("{% url 'get_region_list' %}", function(callback){
+            console.log(callback);
+            var select_options_html = '';
+            $.each(callback,function(region_id,val_dic){
+                //console.log(region_id);
+                var option_ele = "<option region_id='"+ region_id +"' value='"+ region_id+"'  >" + val_dic.name +"</option>";
+                select_options_html += option_ele;
+            });//end each
+
+            $("div[region_type='province'] select").html(select_options_html);
+            RegionDic = callback; //设置全局变量
+        });//end getJSON
+    }
+    function SwitchRegion(ele){
+       console.log($(ele).find("option:selected").val()) ;
+       var region_id = $(ele).find("option:selected").val();
+       var city_regions_html = '';
+
+        $.each(RegionDic[region_id]['childs'],function(index,ele){
+            console.log(ele);
+            var option_ele = "<option value='"+ele.id +"'>" + ele.name +"</option>";
+            city_regions_html += option_ele;
+        }) ;//end each
+        $("div[region_type='city'] select").html(city_regions_html);
+
+    }
+
+    function StartMonitor(){
+        var selected_province_id = $("div[region_type='province'] select").find("option:selected").val();
+        var selected_city_id = $("div[region_type='city'] select").find("option:selected").val();
+        console.log(selected_province_id + "--" + selected_city_id);
+        GetRegionTrendsData(selected_province_id,selected_city_id,60);
+
+        var DataRefresher = setInterval(function () {
+            DrawPieGraph();
+            GetRealTimeReport(selected_province_id,selected_city_id);
+
+        },10000);//end DataRefresher
+
+
+    }
+
+    function GetRegionTrendsData(pro_id,city_id,mins){
+        $.getJSON("{% url 'get_region_trends_data' %}",{
+            'time_range':mins,
+            'site_id':"{{ current_site.id }}",
+            'province_id': pro_id,
+            'city_id': city_id
+        },function(callback){
+                console.log(callback);
+            DrawRegionTrendsGraph(callback,pro_id,city_id,1);
+        });//end getJSON
+    }
+
+    function GetRealTimeReport(selected_province_id,selected_city_id){
+        //把每个属于指定区域的实时汇报都取出来
+        $.getJSON("{% url 'get_region_realtime_output' %}",
+                {    'site_id':"{{ current_site.id }}",
+                     'province_id': selected_province_id,
+                     'city_id': selected_city_id
+                },
+                function(callback){
+                    console.log("------实时监测数据回来了------");
+                    console.log(callback);
+                    var callback = callback.data;
+                    var point_ele = "<p style='color:white;'>" + callback[1] + " --- " + callback[0].times.loadTime + " --- " + callback[0].times.loadTime +
+                                    " --- " + callback[0].times.domReadyTime + "</p>";
+                    $(".real_time_report_watching").append(point_ele);
+
+        });//end getjson
+    }
+    function DrawRegionTrendsGraph(region_trends_data,pro_id,city_id,mins){
+           Highcharts.setOptions({
+                global : {
+                    useUTC : false
+                }
+            });
+
+            // Create the chart
+            $('#region_trends_graph_container').highcharts('StockChart', {
+                chart : {
+                    events : {
+                        load : function () {
+
+                            // set up the updating of the chart each second
+                            var series = this.series[0];
+                            setInterval(function () {
+                                /*var x = (new Date()).getTime(), // current time
+                                    y = Math.round(Math.random() * 100);
+                                series.addPoint([x, y], true, true);*/
+                                $.getJSON("{% url 'get_region_trends_data' %}",{
+                                    'time_range':mins,
+                                    'site_id':"{{ current_site.id }}",
+                                    'province_id': pro_id,
+                                    'city_id': city_id
+                                },function(callback){
+                                        console.log(callback);
+                                    series.addPoint([callback[0].timestamp*1000,
+                                        callback[0].avg], true, true);
+                                });//end getJSON
+                            }, 50000);
+                        }
+                    }
+                },
+
+                rangeSelector: {
+                    buttons: [{
+                        count: 1,
+                        type: 'minute',
+                        text: '1M'
+                    }, {
+                        count: 5,
+                        type: 'minute',
+                        text: '5M'
+                    }, {
+                        type: 'all',
+                        text: 'All'
+                    }],
+                    inputEnabled: false,
+                    selected: 0
+                },
+
+                title : {
+                    text : 'Live random data'
+                },
+
+                exporting: {
+                    enabled: false
+                },
+
+                series : [{
+                    name : 'Random data',
+                    data : (function () {
+                        // generate an array of random data
+                        var data = [];
+
+                        for (i in region_trends_data) {
+                            data.push([
+                                region_trends_data[i].timestamp*1000,
+                                region_trends_data[i].avg
+                            ]);
+                        }
+                        return data;
+                    }())
+                }]
+            });
+
+    }
+
+
+    function DrawPieGraph(){
+
+        // Build the chart
+        $('#access_time_range').highcharts({
+            chart: {
+                plotBackgroundColor: null,
+                plotBorderWidth: null,
+                plotShadow: false
+            },
+            title: {
+                text: 'Browser market shares at a specific website, 2010'
+            },
+            tooltip: {
+        	    pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'
+            },
+            plotOptions: {
+                pie: {
+                    allowPointSelect: true,
+                    cursor: 'pointer',
+                    dataLabels: {
+                        enabled: false
+                    },
+                    showInLegend: true
+                }
+            },
+            series: [{
+                type: 'pie',
+                name: 'Browser share',
+                data: [
+                    ['Firefox',   45.0],
+                    ['IE',       26.8],
+                    {
+                        name: 'Chrome',
+                        y: 12.8,
+                        sliced: true,
+                        selected: true
+                    },
+                    ['Safari',    8.5],
+                    ['Opera',     6.2],
+                    ['Others',   0.7]
+                ]
+            }]
+        });
+    }
+
+    $(document).ready(function(){
+        GetRegionList();
+    });//end doc ready
+
+
+</script>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+
+{% block right-panel-content %}
+
+
+
+        <div class="row placeholders">
+        {% if request.user.is_authenticated %}
+            {% for site in request.user.userprofile.sites.select_related %}
+
+                <div class="col-xs-6 col-sm-3 placeholder">
+                  <h4>Label</h4>
+                  <span class="text-muted"><a href="{% url 'real_time_analysis'  site.id %}">{{ site.name }}</a></span>
+                </div>
+            {% endfor %}
+        {% else %}
+            <h4>请先登录</h4>
+        {% endif %}
+        </div>
+
+
+{% endblock %}

@@ -1,0 +1,276 @@
+{% extends 'base.html' %}
+
+
+{% block right-panel-content %}
+
+    <h2>site 全国视图{{ current_site.name }}</h2>
+
+    <!--for modal window-->
+    <button type="button" class="btn btn-primary" data-toggle="modal" data-target=".bs-example-modal-lg">Large modal</button>
+
+    <div class="modal fade bs-example-modal-lg"  style="margin-top: 100px" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+         <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title" id="myModalLabel">Modal title</h4>
+          </div>
+          <div class="modal-body">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-primary">Save changes</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+    <!--end for modal window-->
+
+
+
+
+    <div class="row placeholders">
+        <div class="col-xs-6 col-sm-3 placeholder">
+          <h4>首屏时间 </h4>
+          <span class="text-muted"><a href="">1.3s</a></span>
+        </div>
+
+        <div class="col-xs-6 col-sm-3 placeholder">
+          <h4>平均加载速度</h4>
+          <span class="text-muted"><a href="">3.5s</a></span>
+        </div>
+
+        <div class="col-xs-6 col-sm-3 placeholder">
+          <h4>有效汇报个数</h4>
+          <span class="text-muted"><a href="" id="valid_data_points"></a></span>
+        </div>
+        <div class="col-xs-6 col-sm-3 placeholder">
+          <h4>来源地区数量</h4>
+          <span class="text-muted"><a href=""></a></span>
+        </div>
+    </div>
+    <div class="row">
+        <div id="country_map_view" style="height: 700px">  </div>
+
+    </div>
+
+    <div class="row">
+        <div id="fastest_regions" style="height:400px;"></div>
+    </div>
+    <div class="row">
+        <div id="slowest_regions" style="height:400px;"></div>
+    </div>
+{% endblock %}
+
+
+{% block bottom-js %}
+    <script src="/static/plugins/echart/esl.js" type="text/javascript"></script>
+    <script src="/static/plugins/echart/config.js" type="text/javascript"></script>
+    <script src="/static/plugins/echart/map/js/china.js" type="text/javascript"></script>
+<script>
+
+
+function randomData() {
+    return Math.round(Math.random()*1000);
+}
+
+function UpdateSumaryData(callback){
+    var total_valid_data_points = callback[1];
+
+    $("#valid_data_points").text(total_valid_data_points);
+}
+
+function DrawFastestRegionRanking(callback){
+    var myChart = echarts.init(document.getElementById('fastest_regions'));
+
+        // 指定图表的配置项和数据
+        var option = {
+            title: {
+                text: '速度最快城市排名'
+            },
+            tooltip: {},
+            legend: {
+                data:['城市']
+            },
+            xAxis: {
+                //data: ["衬衫","羊毛衫","雪纺衫","裤子","高跟鞋","袜子"]
+                data: callback.region_ranking_data[0].fastest.names
+            },
+            yAxis: {},
+            series: [{
+                name: '城市',
+                type: 'bar',
+                //data: [5, 20, 36, 10, 10, 20]
+                data: callback.region_ranking_data[0].fastest.values
+            }]
+        };
+
+        // 使用刚指定的配置项和数据显示图表。
+        myChart.setOption(option);
+}
+
+function DrawSlowestRegionRanking(callback){
+    var myChart = echarts.init(document.getElementById('slowest_regions'));
+
+        // 指定图表的配置项和数据
+        var option = {
+            title: {
+                text: '速度最慢城市排名'
+            },
+            tooltip: {},
+            legend: {
+                data:['城市']
+            },
+            xAxis: {
+                data: callback.region_ranking_data[0].slowest.names
+            },
+            yAxis: {},
+            series: [{
+                name: '城市',
+                type: 'bar',
+                //data: [5, 20, 36, 10, 10, 20]
+                data: callback.region_ranking_data[0].slowest.values
+            }]
+        };
+
+        // 使用刚指定的配置项和数据显示图表。
+        myChart.setOption(option);
+}
+
+
+
+function DisplayRegionAccessList(item){
+    var table_content = "";
+    $.each(item.indexs.requestTime.data,function(index,val){
+        var table_row = "<tr><td>" + val[3].city +"</td>" + "<td>" + val[3].district +"</td>" +
+                        "<td>" + val[3].isp +"</td>" + "<td>" + val[2] +"</td><td>" + val[0] +"</td>" +
+                        "<td><a href='#'>实时</a></td>" + "</tr>" ;
+        table_content +=table_row;
+    });//end each
+
+    //显示每个区域最近5分钟详细访问列表
+    var table_html = "<table class='table table-hover'><" +
+                     "<thead><tr>" +
+                        "<th>城市</th> <th>区\县</th> <th>ISP</th> <th>来源IP</th>  <th>LoadTime</th>  <th>实时监测</th>" +
+                    "</tr></thead>" +
+                    "<tbody>" + table_content + "</tbody>" +
+                    "</table>";
+
+    $(".modal-body").html(table_html);
+    var model_title = item.name + " 最近5分钟requestTime收集列表" + " <a href='/region_realtime_watching/{{current_site.id }}/?region_type=province&region_id="+ item.id+  "' >实时监测</a>";
+    $(".modal-title").html(model_title);
+}
+
+
+function DrawCountryMap(){
+
+    $.getJSON("{% url 'get_latest_country_map_view' %}",{site_id:"{{ current_site.id }}"},function(callback){
+
+        console.log(callback);
+        // 基于准备好的dom，初始化echarts实例
+        $.get('/static/plugins/echart/map/json/china.json', function (chinaJson) {
+        echarts.registerMap('china', chinaJson);
+        var chart = echarts.init(document.getElementById('country_map_view'));
+        chart.setOption({
+                title: {
+                    text: '全国各地用户最近5分钟访问速度',
+                    subtext: '测试数据',
+                    left: 'center'
+                },
+                tooltip: {
+                    trigger: 'item'
+                },
+                legend: {
+                    orient: 'vertical',
+                    left: 'left',
+                    //data:['iphone3','iphone4','iphone5']
+                },
+                visualMap: {
+                    min: 0,
+                    max: 250,
+                    left: 'left',
+                    top: 'bottom',
+                    text: ['高','低'],           // 文本，默认为数值文本
+                    calculable: true
+                },
+                toolbox: {
+                    show: true,
+                    orient: 'vertical',
+                    left: 'right',
+                    top: 'center',
+                    feature: {
+                        dataView: {readOnly: false},
+                        restore: {},
+                        saveAsImage: {}
+                    }
+                },
+            series: [{
+                name:'test',
+                type: 'map',
+                map: 'china',
+                label: {
+                    normal: {
+                        show: true
+                    },
+                    emphasis: {
+                        show: true
+                    }
+                },
+                data:callback.country_map[0],/*[
+                    {name: '宁夏',value: randomData() },
+                    {name: '海南',value: randomData() },
+                    {name: '台湾',value: randomData() },
+                    {name: '香港',value: randomData() },
+                    {name: '澳门',value: randomData() }
+                ]*/
+            }]
+        });
+
+        //给地图绑定区域点击事件
+        chart.on('click', function (params) {
+            console.log(params.name );
+
+            $.each(callback.country_map[0],function(index,item){
+
+
+                if (params.name == item.name){
+                    console.log( item);
+                    DisplayRegionAccessList(item);
+                    $('.bs-example-modal-lg').modal('show');
+                }
+                //console.log( '--');
+                //console.log(item);
+
+            });
+        });
+
+    });
+
+        //图完图了
+
+        UpdateSumaryData(callback); //更新统计概览数据
+        DrawFastestRegionRanking(callback); //最快地区排名
+        DrawSlowestRegionRanking(callback); //最慢地区排名
+
+
+
+
+    })//end getJSON
+
+
+
+
+
+}
+
+$(document).ready(function(){
+
+
+
+    DrawCountryMap();
+
+});//end doc ready
+</script>
+{% endblock %}
+

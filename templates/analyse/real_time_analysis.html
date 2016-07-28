@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+
+
+{% block right-panel-content %}
+
+        <h2>site {{ current_site.name }}</h2>
+
+        <hr>
+
+        <div class="row placeholders">
+            <div class="col-xs-6 col-sm-3 placeholder">
+              <h4>首屏时间 </h4>
+              <span class="text-muted"><a href="">{{ site.name }}</a></span>
+            </div>
+
+            <div class="col-xs-6 col-sm-3 placeholder">
+              <h4>平均加载速度</h4>
+              <span class="text-muted"><a href="">{{ site.name }}</a></span>
+            </div>
+
+            <div class="col-xs-6 col-sm-3 placeholder">
+              <h4>有效汇报个数</h4>
+              <span class="text-muted"><a href="">{{ site.name }}</a></span>
+            </div>
+            <div class="col-xs-6 col-sm-3 placeholder">
+              <h4>来源地区数量</h4>
+              <span class="text-muted"><a href="">{{ site.name }}</a></span>
+            </div>
+        </div>
+        <div class="row">
+            <div id="load-trends"></div>
+        </div>
+
+{% endblock %}
+
+
+{% block bottom-js %}
+<script>
+
+//start draw latest 60 mins load trends graph
+function DrawTrendsGraph(data){
+    var latest60minsData = data.latest_60mins_trends;
+
+    //start draw
+    var seriesOptions = [],
+        // create the chart when all data is loaded
+        createChart = function () {
+
+            $('#load-trends').highcharts('StockChart', {
+                chart:{
+                  type:'area'
+                },
+                rangeSelector: {
+                    selected: 4
+                },
+
+                yAxis: {
+                    labels: {
+                        formatter: function () {
+                            return (this.value > 0 ? ' + ' : '') + this.value;
+                        }
+                    },
+                    plotLines: [{
+                        value: 0,
+                        width: 2,
+                        color: 'silver'
+                    }]
+                },
+
+                plotOptions: {
+                    series: {
+                        //compare: 'percent'
+                    }
+                },
+
+                tooltip: {
+                    pointFormat: '<span style="color:{series.color}">{series.name}</span>: <b>{point.y}</b><br/>',
+                    valueDecimals: 2
+                },
+
+                series: seriesOptions,
+                legend: {
+                    enabled:  true,
+                    layout: 'horizontal',
+                    align: 'center',
+                    horizontalAlign: 'top',
+                    borderWidth: 0
+                },
+
+            });
+        };
+
+    $.each(latest60minsData, function (key, val) {
+        console.log(key);
+        //console.log(val);
+        var index_data = [] ; //存每个指标的图
+
+        //parse each index data
+        for( i in val){
+            //console.log("-->index name:" + i + "--" + val[i] + "type of time:" +val[5]) ;
+            //console.log(val) ;
+            index_data.push([ val[i][5]*1000, val[i][1]]);//5 is timestamp, 2 is avg val
+        }
+        //end parse each index data
+        seriesOptions.push( {
+            name: key,
+            data: index_data
+        } );
+        //console.log(index_data);
+        //for test
+        for (i in index_data){
+            console.log(index_data[i]);
+        }
+
+    }); //end each
+    //console.log('darwing.......');
+    createChart();
+
+   //end draw
+
+
+}
+//end draw latest 60 mins load trends graph
+
+//start with GetLatestAnalysisData
+function GetLatestAnalysisData(){
+
+    $.getJSON("{% url 'get_latest_analysis_data' %}",{site_id: "{{ current_site.id }}" },function(callback){
+            console.log(callback);
+            if (callback){
+
+                DrawTrendsGraph(callback);
+            }
+    });//end getJSON
+}
+//end with GetLatestAnalysisData
+
+
+$(function () {
+    Highcharts.setOptions({ global: { useUTC: false } });
+    GetLatestAnalysisData();
+
+
+});//end doc ready
+</script>
+
+{% endblock %}
