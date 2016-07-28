@@ -31,6 +31,6 @@
  ![image](https://github.com/triaquae/TengLan/blob/master/share/screenshots/p1.jpg)
  ![image](https://github.com/triaquae/TengLan/blob/master/share/screenshots/p2.jpg)
  ![image](https://github.com/triaquae/TengLan/blob/master/share/screenshots/p3.jpg)
- ![image](https://github.com/triaquae/TengLan/blob/master/share/screenshots/p3.png)
- ![image](https://github.com/triaquae/TengLan/blob/master/share/screenshots/p3.png)
+ ![image](https://github.com/triaquae/TengLan/blob/master/share/screenshots/p4.png)
+ ![image](https://github.com/triaquae/TengLan/blob/master/share/screenshots/p5.png)
 
